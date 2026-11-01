@@ -37,7 +37,7 @@ Keys: `[` `]` move focus · `space` pause · `h` hide the panel.
 
 <script src="src/noise.js"></script>
 <script src="src/engine.js"></script>
-<script src="src/scenes/pnw.js"></script>
+<script src="src/scenes/rockies.js"></script>
 <script>
   const bg = AsciiBG.create(document.getElementById('bg'), { speed: 0.6 });
   // bg.setFocus(0.3), bg.setBlur(0), bg.pause(), bg.play(), bg.destroy() ...
