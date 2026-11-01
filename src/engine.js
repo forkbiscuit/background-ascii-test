@@ -13,7 +13,7 @@
  *                  the same amount. Move the focus and the scene "racks".
  *
  * Characters are stamped from a pre-rendered glyph atlas (one column per
- * glyph, one row per brightness level), and layers that haven't moved by a
+ * glyph, one row per ink colour, drawn at any opacity), and layers that haven't moved by a
  * whole device pixel aren't redrawn, so far-away layers cost almost nothing.
  *
  * Layer definition (see src/scenes/*.js for real ones):
@@ -24,7 +24,9 @@
  *     fixed: false,            // true = never scrolls (moon, sky)
  *     occlude: true,           // true = solid silhouette, 'cell' = only the
  *                              // cells you draw, false = transparent
- *     fill: '#181817',         // silhouette colour (defaults to the background)
+ *     fill: '#8a9bb0',         // silhouette colour, or fill(col, S) for a colour
+ *                              // per column (band layers: fill(rowFraction, S))
+ *     ink: 'snow',             // default ink for put() (a key of scene.inks)
  *     static: true,            // glyph() doesn't depend on time -> cache it
  *     fps: 12,                 // ...or redraw at most this often
  *     merge: true,             // share the previous layer's canvas (and blur)
@@ -32,7 +34,8 @@
  *     span(col, S, t, out) {}, // set out[0]=top row, out[1]=bottom row for this
  *                              // world column; return false if nothing's there
  *     glyph(col, row, d, t, put, S, x) {}
- *                              // call put(char, brightness 0..1) for this cell.
+ *                              // call put(char, opacity 0..1, ink?) for this cell;
+ *                              // call it twice to stack (e.g. a block + a stroke).
  *                              // d = rows below the top of the span (can be
  *                              // fractional: the top row has d in (-0.5, 0.5])
  *   }
@@ -48,7 +51,6 @@
   NS.scenes = NS.scenes || {};
   const { clamp, smoothstep } = NS.noise;
 
-  const LEVELS = 20;        // brightness steps in the atlas
   const MAX_BLUR = 3.2;     // css px of blur at full defocus, blur strength 1, 12px type
   const BASE_SPEED = 46;    // css px/s for a layer at z = 1, speed 1
   const PAR_X = 46;         // pointer parallax, css px at z = 1
@@ -79,7 +81,8 @@
     '·': (c, x, y, w, h) => dot(c, x, y, w, h, 0.2),
     '•': (c, x, y, w, h) => dot(c, x, y, w, h, 0.36),
     '■': (c, x, y, w, h) => dot(c, x, y, w, h, 0.62),
-    '█': (c, x, y, w, h) => { const g = Math.max(1, Math.round(h * 0.12)); c.fillRect(x, y + g, w, h - g); },
+    '█': (c, x, y, w, h) => c.fillRect(x, y, w, h),
+    '▆': (c, x, y, w, h) => { const g = Math.max(1, Math.round(h * 0.12)); c.fillRect(x, y + g, w, h - g); },
     '─': (c, x, y, w, h) => { const t = Math.max(1, Math.round(h * 0.08)); c.fillRect(x, Math.round(y + h / 2 - t / 2), w, t); },
     '━': (c, x, y, w, h) => { const t = Math.max(2, Math.round(h * 0.16)); c.fillRect(x, Math.round(y + h / 2 - t / 2), w, t); },
     '▲': (c, x, y, w, h) => {
@@ -93,11 +96,6 @@
     c.fillRect(Math.round(x + (w - s) / 2), Math.round(y + (h - s) / 2), s, s);
   }
 
-  function rgb(hex) {
-    const m = hex.replace('#', '');
-    const n = parseInt(m.length === 3 ? m.split('').map((c) => c + c).join('') : m, 16);
-    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-  }
 
   /*
    * Pick a character for the top edge of a silhouette, so ridgelines read as
@@ -141,23 +139,24 @@
     const stats = { ms: 0, drawn: 0, canvases: 0, groups: {} };
     const S = { W: 0, H: 0, cw: 0, ch: 0, cols: 0, rows: 0, dpr: 1, fontSize: 12, layers: {} };
     const SPAN = [0, 0];
-    const bgRGB = rgb(o.bg), inkRGB = rgb(o.ink);
+    let inkIdx = Object.create(null);
 
-    // put(char, brightness) - the one function scenes use to draw.
-    let curCtx = null, curX = 0, curY = 0, curDim = 1, curCell = false;
+    // put(char, opacity, ink) - the one function scenes use to draw.
+    let curCtx = null, curX = 0, curY = 0, curDim = 1, curCell = false, curInk = 0;
     const warned = {};
-    function put(chr, b) {
+    function put(chr, b, ink) {
       const v = b * curDim;
       if (v <= 0.02) return false;
       const gi = gIdx[chr];
-      if (gi === undefined) {
-        if (!warned[chr]) { warned[chr] = 1; console.warn('[ascii-bg] glyph not in scene.glyphs:', JSON.stringify(chr)); }
+      const row = ink === undefined ? curInk : inkIdx[ink];
+      if (gi === undefined || row === undefined) {
+        const what = gi === undefined ? 'glyph not in scene.glyphs: ' + JSON.stringify(chr) : 'ink not in scene.inks: ' + ink;
+        if (!warned[what]) { warned[what] = 1; console.warn('[ascii-bg] ' + what); }
         return false;
       }
-      let l = (v * LEVELS) | 0;
-      if (l >= LEVELS) l = LEVELS - 1;
-      if (curCell) curCtx.fillRect(curX, curY, CW, CH);
-      curCtx.drawImage(atlas, gi * CW, l * CH, CW, CH, curX, curY, CW, CH);
+      if (curCell) { curCtx.globalAlpha = 1; curCtx.fillRect(curX, curY, CW, CH); }
+      curCtx.globalAlpha = v > 1 ? 1 : v;
+      curCtx.drawImage(atlas, gi * CW, row * CH, CW, CH, curX, curY, CW, CH);
       return true;
     }
 
@@ -208,6 +207,7 @@
         groups.splice(i < 0 ? groups.length : i, 0, sprite);
       }
       groups.forEach((G) => root.appendChild(G.canvas));
+      root.style.background = def.background || o.bg;
       stats.canvases = groups.length;
       focus = firstScene && o.focus != null ? o.focus : def.focus;
       firstScene = false;
@@ -242,16 +242,18 @@
     function buildAtlas() {
       const glyphs = Array.from(new Set(Array.from(' ' + (scene ? scene.glyphs : ''))));
       atlas = document.createElement('canvas');
-      atlas.width = CW * glyphs.length; atlas.height = CH * LEVELS;
+      const inks = Object.assign({ ink: o.ink }, scene ? scene.inks : null);
+      const names = Object.keys(inks);
+      atlas.width = CW * glyphs.length; atlas.height = CH * names.length;
       const c = atlas.getContext('2d');
       c.font = fontSize * dpr + 'px ' + o.font;
       c.textAlign = 'center'; c.textBaseline = 'middle';
       gIdx = Object.create(null);
       glyphs.forEach((gl, i) => { gIdx[gl] = i; });
-      for (let l = 0; l < LEVELS; l++) {
-        const k = (l + 1) / LEVELS;
-        const col = bgRGB.map((v, i) => Math.round(v + (inkRGB[i] - v) * k));
-        c.fillStyle = 'rgb(' + col.join(',') + ')';
+      inkIdx = Object.create(null);
+      names.forEach((name, l) => {
+        inkIdx[name] = l;
+        c.fillStyle = inks[name];
         glyphs.forEach((gl, i) => {
           const x = i * CW, y = l * CH;
           c.save(); c.beginPath(); c.rect(x, y, CW, CH); c.clip();
@@ -259,7 +261,7 @@
           else c.fillText(gl, x + CW / 2, y + CH / 2 + CH * 0.04);
           c.restore();
         });
-      }
+      });
     }
 
     function buildSprite() {
@@ -300,30 +302,35 @@
 
     // putAt(x css px, row, char, brightness) - for free-moving things (birds)
     let curDy = 0;
-    function putAt(x, row, chr, b) {
+    function putAt(x, row, chr, b, ink) {
       curX = Math.round(x * dpr - CW / 2);
       curY = Math.round(row) * CH + curDy;
-      return put(chr, b);
+      return put(chr, b, ink);
     }
 
     function drawSpan(L, ctx) {
       const d = L.def, offDev = L.offDev, dyDev = L.dyDev;
       if (d.custom) {
         curCtx = ctx; curDim = L.dim; curCell = d.occlude === 'cell'; curDy = dyDev;
-        ctx.fillStyle = d.fill || o.bg;
+        curInk = inkIdx[d.ink || 'ink'] || 0;
+        ctx.fillStyle = typeof d.fill === 'string' ? d.fill : o.bg;
         d.custom(S, t, putAt);
         L.key = L.nextKey; L.lastT = t;
         return;
       }
       const k0 = Math.floor(offDev / CW), kN = k0 + cols + 1;
       const occ = d.occlude === true;
+      const fillFn = typeof d.fill === 'function' ? d.fill : null;
       curCtx = ctx; curDim = L.dim; curCell = d.occlude === 'cell';
-      ctx.fillStyle = d.fill || o.bg;
+      curInk = inkIdx[d.ink || 'ink'] || 0;
+      ctx.fillStyle = fillFn ? o.bg : d.fill || o.bg;
       for (let k = k0; k <= kN; k++) {
         if (!d.span(k, S, t, SPAN)) continue;
         const r0 = Math.max(-2, Math.round(SPAN[0])), r1 = Math.min(rows + 2, Math.round(SPAN[1]));
         if (r1 <= r0) continue;
         const xDev = k * CW - offDev;
+        if (fillFn) ctx.fillStyle = fillFn(k, S);
+        ctx.globalAlpha = 1;
         if (occ) ctx.fillRect(xDev, r0 * CH + dyDev, CW, (r1 - r0) * CH);
         curX = xDev;
         const x = xDev / dpr;
@@ -341,11 +348,21 @@
       const r1 = d.band[1] >= 1 ? rows + 2 : Math.round(d.band[1] * rows);
       const dyDev = Math.round(-pointer.y * PAR_Y * L.zMean * dpr);
       if (!L.rowOff || L.rowOff.length < rows + 3) L.rowOff = new Float32Array(rows + 3);
+      const fillFn = typeof d.fill === 'function' ? d.fill : null;
       curCtx = ctx; curCell = d.occlude === 'cell';
-      ctx.fillStyle = d.fill || o.bg;
-      if (d.occlude === true) ctx.fillRect(0, r0 * CH + dyDev, Wd, (r1 - r0) * CH);
+      curInk = inkIdx[d.ink || 'ink'] || 0;
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = fillFn ? o.bg : d.fill || o.bg;
+      if (d.occlude === true && !fillFn) ctx.fillRect(0, r0 * CH + dyDev, Wd, (r1 - r0 + 3) * CH);
       for (let r = r0; r < r1; r++) {
         const rf = (r + 0.5) / rows;
+        if (fillFn && d.occlude === true) {
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = fillFn(rf, S);
+          // the last row's fill runs a few rows on, under the next band, so blurred
+          // band edges never show a seam
+          ctx.fillRect(0, r * CH + dyDev, Wd, r === r1 - 1 ? CH * 4 : CH + 1);
+        }
         const z = d.zAt(rf);
         const off = scroll * z + pointer.x * PAR_X * z;
         L.rowOff[Math.max(0, r)] = off;
@@ -384,6 +401,7 @@
         for (const L of G.layers) { prepare(L); dirty = dirty || L.dirty; }
         if (!dirty) continue;
         const tg = o.debug ? performance.now() : 0;
+        G.ctx.globalAlpha = 1;
         G.ctx.clearRect(0, 0, Wd, Hd);
         for (const L of G.layers) {
           if (L.def.band) drawBand(L, G.ctx);

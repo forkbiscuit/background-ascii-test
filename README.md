@@ -2,7 +2,7 @@
 
 Daytime in the Canadian Rockies, drawn entirely in ASCII: jagged peaks with glaciers and tilted rock strata, sun and drifting cumulus, foothills, spruce forest, a glacial lake that mirrors the peaks, a few birds, and a rock pile right in front of the lens. Every layer moves at its own speed and has its own focus blur, so the flat text reads with real depth.
 
-Off-black background, warm off-white type, no dependencies, no build step.
+Full daytime colour: a blue sky with sun glow, white snow on blue-grey rock, green spruce, a turquoise glacial lake whose reflections pick up the real colours above it. Everything is still drawn with characters. No dependencies, no build step.
 
 ## Run it
 
@@ -44,7 +44,7 @@ Keys: `[` `]` move focus · `space` pause · `h` hide the panel.
 </script>
 ```
 
-Options: `scene`, `focus`, `blur`, `speed`, `snap`, `pointer`, `autoRack`, `start`, `fontSize`, `bg`, `ink`, `fps`, `maxDpr`. Colours default to `#121211` (background) and `#ece7dc` (type).
+Options: `scene`, `focus`, `blur`, `speed`, `snap`, `pointer`, `autoRack`, `start`, `fontSize`, `bg`, `ink`, `fps`, `maxDpr`. Colours live in the scene: `background` (any CSS background, the sky here), `inks` (named character colours) and each layer's `fill`.
 
 It respects `prefers-reduced-motion` (slows right down), skips frames when nothing has changed, only redraws a layer once it has moved by a whole pixel, and drops to 1× resolution on devices that can't hold ~40 fps.
 
@@ -58,7 +58,7 @@ Each layer is drawn onto its own stacked `<canvas>`:
 4. **Reflections** – each lake cell looks up what sits above the waterline at its mirrored position (stretched 1.6× so the peaks land in the water), then ripple noise breaks it into streaks.
 5. **Light** – the sun is upper left, so faces that rise to the right are lit and faces that fall away are in shadow. Rock gets tilted strata bands; snow and glaciers follow the fall line.
 
-Characters are stamped from a pre-rendered glyph atlas (one column per glyph, one row per brightness level). Ridgelines pick characters by slope and sub-row position (`_ - ' / \`) so they read as smooth lines instead of staircases.
+Characters are stamped from a pre-rendered glyph atlas (one column per glyph, one row per ink colour) at any opacity, so one cell can stack a solid block and a stroke. Ridgelines pick characters by slope and sub-row position (`_ - ' / \`) so they read as smooth lines instead of staircases.
 
 ## Make your own scene
 
