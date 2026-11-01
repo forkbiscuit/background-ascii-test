@@ -4,18 +4,25 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#ecebe7">
-  <title>ASCII Depth</title>
+  <title>Robert Stuart</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <main id="stage"></main>
+  <main id="stage" aria-hidden="true"></main>
+
+  <header class="hero">
+    <h1 class="hero-name">Robert Stuart</h1>
+    <p class="hero-title">Senior Product Designer</p>
+    <a class="hero-cta" href="https://www.mrrobertstuart.com/#work">View work <span aria-hidden="true">→</span></a>
+  </header>
 
   <!-- Plain scripts (no modules) so this also works opened straight from disk. -->
   <script src="src/noise.js"></script>
   <script src="src/engine.js"></script>
+  <script src="src/scenes/vista.js"></script>
   <script src="src/scenes/bc.js"></script>
   <script src="src/ui.js"></script>
   <script>
@@ -25,14 +32,14 @@
     const flag = (k) => (q.has(k) ? q.get(k) !== '0' : undefined);
 
     const bg = AsciiBG.create(document.getElementById('stage'), {
-      scene: AsciiBG.scenes[q.get('scene')] ? q.get('scene') : 'bc',
+      scene: AsciiBG.scenes[q.get('scene')] ? q.get('scene') : 'vista',
       focus: num('focus'),
       blur: num('blur'),
       speed: num('speed'),
       snap: flag('snap'),
       pointer: flag('pointer'),
       autoRack: flag('rack'),
-      start: num('start') ?? 215,  // open with a cabin in view
+      start: num('start') ?? 215,  // skip ahead (in BC, this opens with a cabin in view)
       debug: flag('debug'),
     });
 

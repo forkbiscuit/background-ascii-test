@@ -1,14 +1,19 @@
 # background-ascii-test
 
-A side-scrolling walk through the British Columbia backcountry in ASCII, in two colours: paper and ink. Snow-capped Coast Mountains, forested foothills, a fir forest line, stands of tall Douglas firs and the odd log cabin with chimney smoke scrolling past, cloud banks hanging from the top, and a ruled ground strip.
+An ASCII landscape background for mrrobertstuart.com, in two colours: paper and ink. Every layer moves at its own speed and has its own focus blur, so flat text reads with real depth. No dependencies, no build step.
 
-Everything is drawn in "ruled" ASCII: horizontal rules broken into runs and sprinkled with symbols (`─ • = □ ■ 0–9`). Every layer moves at its own speed and has its own focus blur, so the flat text reads with real depth. No dependencies, no build step.
+Two scenes:
+
+- **Vista** (default): a giant knitted sun with hatched rays, a jagged Coast Mountains range with snow left as bare paper, valley haze, a pointed fir treeline and a dense forest of strokes that slides faster the closer it is. The left of the sky is kept clear for the header.
+- **BC**: a side-scroller in "ruled" ASCII (horizontal rules broken into runs and sprinkled with `─ • = □ ■ 0–9`): mountains, foothills, stands of Douglas firs and log cabins with chimney smoke passing by over a ruled ground strip.
+
+`index.html` shows the header (name, title, View work) over the scene.
 
 ## Run it
 
 Open `index.html` in a browser. It works straight from disk (plain scripts, no modules), or serve the folder with anything (`npx serve`, GitHub Pages, etc.).
 
-- `index.html` – the scene with a small control panel
+- `index.html` – the header over the scene, with a small control panel
 - `example.html` – the same scene used as a quiet background behind page content
 
 ## Controls
@@ -37,7 +42,7 @@ Keys: `[` `]` move focus · `space` pause · `h` hide the panel.
 
 <script src="src/noise.js"></script>
 <script src="src/engine.js"></script>
-<script src="src/scenes/bc.js"></script>
+<script src="src/scenes/vista.js"></script>
 <script>
   const bg = AsciiBG.create(document.getElementById('bg'), { speed: 0.6 });
   // bg.setFocus(0.3), bg.setBlur(0), bg.pause(), bg.play(), bg.destroy() ...
@@ -85,7 +90,7 @@ AsciiBG.scenes.myscene = {
 };
 ```
 
-See `src/scenes/bc.js` for everything else (band layers, merged canvases, reflections, free-moving birds via `custom`) and the header of `src/engine.js` for the full layer reference.
+See `src/scenes/vista.js` and `src/scenes/bc.js` for everything else (band layers, merged canvases, reflections, free-moving birds via `custom`) and the header of `src/engine.js` for the full layer reference.
 
 ## Files
 
@@ -95,6 +100,7 @@ example.html        used as a page background
 styles.css          panel styles
 src/noise.js        seeded hash / value noise / fbm / ridged noise
 src/engine.js       renderer: layers, parallax, occlusion, depth of field
-src/scenes/bc.js    the BC scene
+src/scenes/vista.js the Vista scene (default)
+src/scenes/bc.js    the BC side-scroller
 src/ui.js           control panel
 ```

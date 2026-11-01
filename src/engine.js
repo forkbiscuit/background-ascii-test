@@ -51,13 +51,13 @@
   NS.scenes = NS.scenes || {};
   const { clamp, smoothstep } = NS.noise;
 
-  const MAX_BLUR = 3.2;     // css px of blur at full defocus, blur strength 1, 12px type
+  const MAX_BLUR = 2.6;     // css px of blur at full defocus, blur strength 1, 12px type
   const BASE_SPEED = 46;    // css px/s for a layer at z = 1, speed 1
   const PAR_X = 46;         // pointer parallax, css px at z = 1
   const PAR_Y = 10;
 
   const DEFAULTS = {
-    scene: 'bc',
+    scene: 'vista',
     focus: null,            // null = the scene's own focus depth
     blur: 1,                // depth-of-field strength, 0 = everything sharp
     speed: 1,
@@ -174,7 +174,7 @@
       return o.blur * MAX_BLUR * (fontSize / 12) * smoothstep(0.03, 0.6, Math.abs(z - focus));
     }
     function dimFor(z) {
-      return 1 - Math.min(1, o.blur) * 0.4 * smoothstep(0.03, 0.6, Math.abs(z - focus));
+      return 1 - Math.min(1, o.blur) * 0.3 * smoothstep(0.03, 0.6, Math.abs(z - focus));
     }
     function setFilter(G) {
       const b = blurFor(G.z);
