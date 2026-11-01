@@ -164,10 +164,10 @@
 
     // ---- depth of field ----------------------------------------------------
     function blurFor(z) {
-      return o.blur * MAX_BLUR * (fontSize / 12) * smoothstep(0.05, 0.7, Math.abs(z - focus));
+      return o.blur * MAX_BLUR * (fontSize / 12) * smoothstep(0.02, 0.5, Math.abs(z - focus));
     }
     function dimFor(z) {
-      return 1 - Math.min(1, o.blur) * 0.35 * smoothstep(0.05, 0.85, Math.abs(z - focus));
+      return 1 - Math.min(1, o.blur) * 0.4 * smoothstep(0.03, 0.6, Math.abs(z - focus));
     }
     function setFilter(G) {
       const b = blurFor(G.z);

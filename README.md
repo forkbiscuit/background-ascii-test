@@ -2,7 +2,7 @@
 
 Daytime in the Canadian Rockies, drawn entirely in ASCII: jagged peaks with glaciers and tilted rock strata, sun and drifting cumulus, foothills, spruce forest, a glacial lake that mirrors the peaks, a few birds, and a rock pile right in front of the lens. Every layer moves at its own speed and has its own focus blur, so the flat text reads with real depth.
 
-Full daytime colour: a blue sky with sun glow, white snow on blue-grey rock, green spruce, a turquoise glacial lake whose reflections pick up the real colours above it. Everything is still drawn with characters. No dependencies, no build step.
+Daytime, drawn like a warm pen-and-ink print: a paper sky with an amber sun, snow left as bare paper and rock hatched in charcoal, olive forest, a pale jade lake. Colour lives in the characters, so out-of-focus layers blur into soft haze. No dependencies, no build step.
 
 ## Run it
 

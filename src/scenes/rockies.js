@@ -1,9 +1,12 @@
 /*
  * Scene: Rockies
- * Daytime in the Canadian Rockies. A jagged range with snowfields, glaciers
- * and tilted rock strata, a blue sky with sun and drifting cumulus, forested
- * foothills, spruce, a turquoise glacial lake that mirrors the peaks in their
- * own colours, a few birds, and a rock pile right in front of the lens.
+ * Daytime in the Canadian Rockies, drawn like a pen-and-ink print: warm paper
+ * sky, an amber sun, a jagged range where the snow is the paper itself and the
+ * rock is hatched in charcoal, olive foothills and spruce, a jade lake that
+ * mirrors the peaks, a few birds, and a rock pile right in front of the lens.
+ *
+ * Colour lives in the characters; silhouettes get only a faint tint, so when
+ * a layer falls out of focus its strokes blur into soft haze (depth of field).
  *
  * Depth (z), back to front:
  *   0     sky, sun                 0.02 clouds
@@ -13,8 +16,7 @@
  *   0.95  rock pile
  *
  * Light comes from the upper left: faces that rise to the right are lit,
- * faces that fall away to the right are in shadow. Farther layers are paler
- * and bluer (aerial perspective).
+ * faces that fall away to the right are in shadow and get denser hatching.
  */
 (function (g) {
   'use strict';
@@ -28,16 +30,16 @@
 
   // ---- palette -----------------------------------------------------------------------
   const INKS = {
-    sky: '#ffffff', sun: '#fff8de',
-    cloud: '#ffffff', cloudShade: '#9fb6ca',
-    snow: '#f9fbfd', snowShade: '#9fb3c8', ice: '#d4e8f1',
-    rock: '#334256', rockLight: '#dbe4ec',
-    forest: '#1f3a31', forestLight: '#b4d0bf',
-    spruce: '#0f2219', spruceLight: '#9cc59a',
-    skyRefl: '#d3eef2', rockRefl: '#6e8ba1', forestRefl: '#3d6b64', spruceRefl: '#163d38',
-    water: '#eaf8f7',
-    stone: '#58534b', stoneLight: '#ebe5d6',
-    bird: '#28313c',
+    sky: '#b9ab94', sun: '#efad45', sunRay: '#d99a3e',
+    cloud: '#8c8170', cloudShade: '#b9ad99',
+    snowShade: '#a1978a',
+    rock: '#2f2924', rockMid: '#7a6e61',
+    forest: '#5f6b42', forestDark: '#3b4527',
+    spruce: '#1f2a16', spruceLight: '#6b7f45',
+    lake: '#7f9e89',
+    reflSnow: '#fffdf8', reflRock: '#7a6f62', reflForest: '#626f45', reflSpruce: '#33442a', reflSky: '#c8d5c3',
+    stone: '#4b433a', stoneMid: '#8a7e70',
+    bird: '#3a332c',
   };
   const lerpHex = (a, b, t) => {
     const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
@@ -110,7 +112,8 @@
   function spruceGlyph(k, r, d, put, a, seed) {
     const h = hash(k, r, seed);
     if (firDx === 99) return h < 0.45 && put(h < 0.2 ? ',' : '.', a * 0.8, h < 0.2 ? 'spruce' : 'spruceLight');
-    if (d < 1 && Math.abs(firDx) < 1) return put('^', a, 'spruceLight');
+    put('█', a * 0.14, 'spruce');                            // a light tone under the strokes
+    if (d < 1 && Math.abs(firDx) < 1) return put('^', a, 'spruce');
     if (h > 0.94) return;
     if (firDx < -0.55) put('/', a * (r % 3 === 0 ? 1 : 0.85), 'spruceLight');
     else if (firDx > 0.55) put('\\', a, 'spruce');
@@ -126,7 +129,7 @@
     if (glacier && d < 18) return lit === 0 ? 'snowShade' : 'ice';
     return 'rock';
   }
-  const rangeFill = ['#7f92a8', '#93a5b9', '#a8b8c9'];       // shadow, side, lit
+  const rangeFill = ['#e6e0d6', '#f2eee7', '#fbf9f4'];       // shadow, side, lit: snow is whiter than the sky
 
   // ---- sky, sun, clouds ----------------------------------------------------------------
   function cloud(seed, base, freq) {
@@ -174,33 +177,33 @@
   function sceneInk(x, r, S) {
     const L = S.layers, rows = S.rows;
     const col = (name) => Math.floor((x + L[name].off) / S.cw);
-    reflA = 0.75;
-    if (r >= nearSpruceTop(col('near spruce'), rows)) return 'spruceRefl';
-    if (r >= farSpruceTop(col('far spruce'), rows)) return 'spruceRefl';
+    reflA = 0.8;
+    if (r >= nearSpruceTop(col('near spruce'), rows)) return 'reflSpruce';
+    if (r >= farSpruceTop(col('far spruce'), rows)) return 'reflSpruce';
     let k = col('foothills');
-    if (r >= footTop(k, rows)) return 'forestRefl';
+    if (r >= footTop(k, rows)) return 'reflForest';
     k = col('range');
     const top = rangeTop(k, rows);
     if (r >= top) {
       const s = rangeSurface(k, r, r - top, rows, facing(rangeTop, k, rows));
-      reflA = s === 'rock' ? 0.7 : 0.85;
-      return s === 'rock' ? 'rockRefl' : s;
+      reflA = s === 'rock' ? 0.75 : 1;
+      return s === 'rock' ? 'reflRock' : 'reflSnow';
     }
     k = col('clouds');
-    if (r >= CLOUD.top(k, rows) && r <= CLOUD.bottom(k) * rows) { reflA = 0.8; return 'cloud'; }
+    if (r >= CLOUD.top(k, rows) && r <= CLOUD.bottom(k) * rows) { reflA = 1; return 'reflSnow'; }
     const xs = x + L.sun.off, y = (r + 0.5) * S.ch;
     if ((xs - sx) ** 2 + (y - sy) ** 2 < sr * sr * 1.6) { reflA = 1; return 'sun'; }
-    reflA = 0.55;
-    return 'skyRefl';
+    reflA = 0.6;
+    return 'reflSky';
   }
 
   NS.scenes.rockies = {
     title: 'Rockies',
-    focus: 0.12,
-    // the sky itself is a CSS background behind every canvas
+    focus: 0.26,                                            // the shoreline spruce
+    // the sky itself is a CSS background behind every canvas: warm paper + sun glow
     background:
-      'radial-gradient(circle at 22% 10%, rgba(255,250,232,0.95) 0, rgba(255,246,218,0.5) 6vmin, rgba(255,246,218,0) 26vmin),' +
-      'linear-gradient(180deg, #5893cc 0%, #86b8de 28%, #c3e0ef 52%, #e4f1f3 62%, #e4f1f3 100%)',
+      'radial-gradient(circle at 22% 10%, rgba(244,176,70,0.32) 0, rgba(244,176,70,0.14) 8vmin, rgba(244,176,70,0) 30vmin),' +
+      'linear-gradient(180deg, #e2d6c1 0%, #e9dfcd 45%, #eee6d7 62%, #eee6d7 100%)',
     inks: INKS,
     glyphs: "─-·█.,:'^_=|/\\v",
 
@@ -215,12 +218,12 @@
         name: 'sky', z: 0, fixed: true, occlude: false, static: true, ink: 'sky',
         span(k, S, t, out) { out[0] = 0; out[1] = S.rows * HORIZON; return true; },
         glyph(k, r, d, t, put, S) {
-          if (r % 2 || noise2(k * 0.03, r * 0.2, 4) < 0.3) return;    // thin high streaks
-          put('─', 0.14 + 0.2 * (1 - r / (S.rows * HORIZON)));
+          if (r % 2 || noise2(k * 0.03, r * 0.2, 4) < 0.42) return;   // thin high streaks
+          put('─', 0.22 + 0.3 * (1 - r / (S.rows * HORIZON)));
         },
       },
       {
-        name: 'sun', z: 0.005, fixed: true, occlude: true, fill: INKS.sun, static: true, merge: true, stop: false,
+        name: 'sun', z: 0.005, fixed: true, occlude: true, fill: '#f2b552', static: true, merge: true, stop: false,
         span(k, S, t, out) {
           const dx = (k + 0.5) * S.cw - sx;
           if (Math.abs(dx) >= sr) return false;
@@ -231,7 +234,17 @@
         glyph() {},
       },
       {
-        name: 'clouds', z: 0.02, occlude: true, fill: '#f3f7fa', static: true, stop: false,
+        name: 'sun rays', z: 0.005, fixed: true, occlude: false, static: true, merge: true, stop: false, ink: 'sunRay',
+        span(k, S, t, out) { out[0] = (sy - sr * 2.8) / S.ch; out[1] = (sy + sr * 2.8) / S.ch; return true; },
+        glyph(k, r, d, t, put, S) {
+          if ((k + r) % 3) return;                                // diagonal hatching
+          const u = (Math.hypot((k + 0.5) * S.cw - sx, (r + 0.5) * S.ch - sy) - sr * 1.35) / (sr * 1.45);
+          if (u < 0 || u > 1 || hash(k, r, 9) < u * 0.8) return;
+          put('/', 0.75 * (1 - u));
+        },
+      },
+      {
+        name: 'clouds', z: 0.02, occlude: true, fill: '#faf7f1', static: true, stop: false,
         span(k, S, t, out) {
           const top = CLOUD.top(k, S.rows);
           if (top > S.rows) return false;
@@ -239,7 +252,7 @@
           return out[1] - out[0] > 0.7;
         },
         glyph(k, r, d, t, put, S) {
-          if (d < 1) return put(edge((CLOUD.top(k + 1, S.rows) - CLOUD.top(k - 1, S.rows)) / 2, d), 1, 'cloud');
+          if (d < 1) return put(edge((CLOUD.top(k + 1, S.rows) - CLOUD.top(k - 1, S.rows)) / 2, d), 0.9, 'cloud');
           const below = CLOUD.bottom(k) * S.rows + 0.6 - r;          // rows above the cloud base
           if (below < 1) return put('_', 0.8, 'cloudShade');
           const h = hash(k, r, 222);
@@ -255,40 +268,43 @@
           const lit = facing(rangeTop, k, rows);
           const surf = rangeSurface(k, r, d, rows, lit);
           const h = hash(k, r, 208);
+          // an ink outline on every summit
+          if (d < 1) return put(edge((rangeTop(k + 1, rows) - rangeTop(k - 1, rows)) / 2, d), 0.95, 'rock');
           if (surf !== 'rock') {
-            put('█', 1, surf);                                    // snow and ice
+            // snow is the paper: sparse hatching down the fall line, heavier in shadow
             const s = (rangeTop(k + 2, rows) - rangeTop(k - 2, rows)) / 4;
-            // strokes down the fall line give the snow its ASCII texture
-            if (h < 0.55) put(s < -0.25 ? '/' : s > 0.25 ? '\\' : h < 0.3 ? ':' : '|', lit === 2 ? 0.75 : 0.5, lit === 2 ? 'snowShade' : 'rock');
+            const dens = lit === 2 ? 0.14 : lit === 1 ? 0.3 : 0.55;
+            if (h < dens) put(s < -0.25 ? '/' : s > 0.25 ? '\\' : h < dens / 2 ? ':' : '|', lit === 0 ? 0.8 : 0.65, 'snowShade');
             return;
           }
-          if (d < 1) return put(edge((rangeTop(k + 1, rows) - rangeTop(k - 1, rows)) / 2, d), 0.8, lit ? 'rockLight' : 'rock');
-          if (r > rows * (HORIZON - 0.045)) return h < 0.7 && put(h < 0.3 ? ':' : '.', 0.75, h < 0.3 ? 'rock' : 'rockLight');  // scree
+          put('█', lit === 0 ? 0.2 : lit === 1 ? 0.13 : 0.08, 'rockMid');   // rock gets a tone
+          if (r > rows * (HORIZON - 0.045)) return h < 0.6 && put(h < 0.3 ? ':' : '.', 0.75, 'rock');   // scree
           // tilted sedimentary strata, the signature of the Rockies
           const band = (((r + Math.floor(k * 0.35)) % 3) + 3) % 3 === 0;
-          if (band && h < 0.85) return put(h < 0.45 ? '_' : '=', 0.8, 'rock');
-          if (h < 0.6) put(h < 0.15 ? (lit === 2 ? '/' : '\\') : h < 0.4 ? ':' : '.', 0.7, lit === 2 && h < 0.3 ? 'rockLight' : 'rock');
+          if (band && h < 0.85) return put(h < 0.45 ? '_' : '=', 0.85, 'rock');
+          if (h < (lit === 0 ? 0.7 : 0.5)) put(h < 0.15 ? (lit === 2 ? '/' : '\\') : h < 0.4 ? ':' : '.', 0.75, 'rock');
         },
       },
       {
         name: 'foothills', z: 0.09, occlude: true, static: true,
-        fill: (k, S) => (facing(footTop, k, S.rows) === 0 ? '#62807a' : '#779a8f'),
+        fill: (k, S) => (facing(footTop, k, S.rows) === 0 ? '#d6d4b8' : '#e2e0c7'),
         span(k, S, t, out) { out[0] = footTop(k, S.rows); out[1] = S.rows * HORIZON + 1; return true; },
         glyph(k, r, d, t, put, S) {
           const lit = facing(footTop, k, S.rows) > 0;
-          if (d < 1.6 && footTop(k, S.rows) < S.rows * (HORIZON - 0.13)) return put('█', 0.9, lit ? 'snow' : 'snowShade');  // dusting of snow
-          if (d < 1) return put(edge((footTop(k + 1, S.rows) - footTop(k - 1, S.rows)) / 2, d), 0.7, 'forestLight');
+          if (d < 1) return put(edge((footTop(k + 1, S.rows) - footTop(k - 1, S.rows)) / 2, d), 0.9, 'forestDark');
+          if (d < 1.6 && footTop(k, S.rows) < S.rows * (HORIZON - 0.13)) return;   // a dusting of snow: bare paper
+          put('█', lit ? 0.1 : 0.17, 'forest');
           const h = hash(k, r, 212);
-          if (h < 0.7) put(h < 0.3 ? ':' : h < 0.5 ? '^' : '.', 0.75, lit && h > 0.3 ? 'forestLight' : 'forest');
+          if (h < 0.7) put(h < 0.3 ? ':' : h < 0.5 ? '^' : '.', 0.9, lit && h > 0.3 ? 'forest' : 'forestDark');
         },
       },
       {
-        name: 'far spruce', z: 0.18, occlude: true, fill: '#4a7262', static: true,
+        name: 'far spruce', z: 0.18, occlude: true, fill: '#d3d6b8', static: true,
         span(k, S, t, out) { out[0] = farSpruceTop(k, S.rows); out[1] = S.rows * HORIZON + 1; return true; },
         glyph(k, r, d, t, put, S) { farSpruceTop(k, S.rows); spruceGlyph(k, r, d, put, 0.7, 63); },
       },
       {
-        name: 'near spruce', z: 0.28, occlude: true, fill: '#36604a', static: true,
+        name: 'near spruce', z: 0.28, occlude: true, fill: '#bfc99e', static: true,
         span(k, S, t, out) { out[0] = nearSpruceTop(k, S.rows); out[1] = S.rows * HORIZON + 1; return true; },
         glyph(k, r, d, t, put, S) { nearSpruceTop(k, S.rows); spruceGlyph(k, r, d, put, 0.95, 73); },
       },
@@ -308,7 +324,7 @@
       // The lake: four bands, each row with its own depth and speed.
       ...[[HORIZON, 0.69], [0.69, 0.78], [0.78, 0.89], [0.89, 1]].map((band, i) => ({
         name: 'lake ' + (i + 1), band, zAt: waterZ, occlude: true, stop: i === 0 || i === 3,
-        fill: (rf) => lerpHex('#67c2c1', '#24838f', clamp((rf - HORIZON) / (1 - HORIZON), 0, 1)),   // glacial turquoise
+        fill: (rf) => lerpHex('#dfe6d6', '#c3d3c1', clamp((rf - HORIZON) / (1 - HORIZON), 0, 1)),   // pale jade
         glyph(k, r, rf, t, put, S, x) {
           const depth = (rf - HORIZON) / (1 - HORIZON);
           const n = noise2(k * 0.06, r * 0.85 + t * 0.16, 81);
@@ -319,13 +335,14 @@
           const wobble = Math.sin(r * 1.37 + t * 1.1) * S.cw * (0.4 + 2.4 * depth);
           const ink = sceneInk(x + wobble, mr, S);
           const a = reflA * (0.7 + 0.8 * (v - 0.4)) * (1 - 0.15 * depth);
-          if (ink === 'sun' && hash(k, r, (t * 6) | 0) > 0.5) return put('·', 1, 'water');   // glitter
+          if (ink === 'sun') return hash(k, r, (t * 6) | 0) > 0.4 && put(v > 0.5 ? '-' : '·', 1, 'sun');   // glitter
+          if (ink === 'reflSky') return put(v > 0.6 ? '-' : '·', 0.7, 'lake');   // open water: just ripples
           put(v > 0.55 ? '─' : v > 0.4 ? '-' : '·', a, ink);
         },
       })),
       {
         name: 'rock pile', z: 0.95, occlude: true, static: true,
-        fill: (k) => { rocks(k); return rockDx < 0.1 ? '#a8a295' : '#7c766c'; },
+        fill: (k) => { rocks(k); return rockDx < 0.1 ? '#ebe4d7' : '#ddd4c4'; },
         span(k, S, t, out) {
           const h = rocks(k);
           if (h < 0.8) return false;
@@ -336,10 +353,11 @@
           const s = rocks(k - 1) - rocks(k + 1);                 // + means rising to the right
           rocks(k);
           const lit = rockDx < 0.1;
-          if (d < 1) return put(edge(s / 2, d), lit ? 1 : 0.6, lit ? 'stoneLight' : 'stone');
+          if (d < 1) return put(edge(s / 2, d), 0.95, 'stone');
+          put('█', lit ? 0.1 : 0.2, 'stoneMid');
           const h = hash(k, r, 303);
-          if (h > 0.6) return;
-          put(h < 0.08 ? '/' : h < 0.35 ? ':' : '.', 0.75, lit && h > 0.2 ? 'stoneLight' : 'stone');
+          if (h > (lit ? 0.45 : 0.65)) return;
+          put(h < 0.08 ? '/' : h < 0.35 ? ':' : '.', 0.8, 'stone');
         },
       },
     ],
