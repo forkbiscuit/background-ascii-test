@@ -1,8 +1,8 @@
 # background-ascii-test
 
-Daytime in the Canadian Rockies, drawn entirely in ASCII: jagged peaks with glaciers and tilted rock strata, sun and drifting cumulus, foothills, spruce forest, a glacial lake that mirrors the peaks, a few birds, and a rock pile right in front of the lens. Every layer moves at its own speed and has its own focus blur, so the flat text reads with real depth.
+A side-scrolling walk through the British Columbia backcountry in ASCII, in two colours: paper and ink. Snow-capped Coast Mountains, forested foothills, a fir forest line, stands of tall Douglas firs and the odd log cabin with chimney smoke scrolling past, cloud banks hanging from the top, and a ruled ground strip.
 
-Daytime, drawn like a warm pen-and-ink print: a paper sky with an amber sun, snow left as bare paper and rock hatched in charcoal, olive forest, a pale jade lake. Colour lives in the characters, so out-of-focus layers blur into soft haze. No dependencies, no build step.
+Everything is drawn in "ruled" ASCII: horizontal rules broken into runs and sprinkled with symbols (`─ • = □ ■ 0–9`). Every layer moves at its own speed and has its own focus blur, so the flat text reads with real depth. No dependencies, no build step.
 
 ## Run it
 
@@ -37,14 +37,14 @@ Keys: `[` `]` move focus · `space` pause · `h` hide the panel.
 
 <script src="src/noise.js"></script>
 <script src="src/engine.js"></script>
-<script src="src/scenes/rockies.js"></script>
+<script src="src/scenes/bc.js"></script>
 <script>
   const bg = AsciiBG.create(document.getElementById('bg'), { speed: 0.6 });
   // bg.setFocus(0.3), bg.setBlur(0), bg.pause(), bg.play(), bg.destroy() ...
 </script>
 ```
 
-Options: `scene`, `focus`, `blur`, `speed`, `snap`, `pointer`, `autoRack`, `start`, `fontSize`, `bg`, `ink`, `fps`, `maxDpr`. Colours live in the scene: `background` (any CSS background, the sky here), `inks` (named character colours) and each layer's `fill`.
+Options: `scene`, `focus`, `blur`, `speed`, `snap`, `pointer`, `autoRack`, `start`, `fontSize`, `fontWeight`, `bg`, `ink`, `fps`, `maxDpr`. The two colours are `bg` (paper, `#ecebe7`) and `ink` (`#1c1b19`); pass your own pair to recolour the whole scene.
 
 It respects `prefers-reduced-motion` (slows right down), skips frames when nothing has changed, only redraws a layer once it has moved by a whole pixel, and drops to 1× resolution on devices that can't hold ~40 fps.
 
@@ -52,11 +52,10 @@ It respects `prefers-reduced-motion` (slows right down), skips frames when nothi
 
 Each layer is drawn onto its own stacked `<canvas>`:
 
-1. **Parallax** – a layer at depth `z` scrolls at `z × speed`. The sky and sun are fixed; the range barely moves; the lake is split into bands where every row has its own depth, so the water slides like a floor.
+1. **Parallax** – a layer at depth `z` scrolls at `z × speed`. The mountains barely move; the ground is split into bands where every row has its own depth, so it slides like a floor.
 2. **Occlusion** – each layer paints a silhouette in the background colour under its characters, so nearer things hide farther things. Farther layers get a slightly lighter fill (atmospheric perspective).
 3. **Depth of field** – each canvas gets a CSS `blur()` and its characters dim based on the distance between its `z` and the focus depth.
-4. **Reflections** – each lake cell looks up what sits above the waterline at its mirrored position (stretched 1.6× so the peaks land in the water), then ripple noise breaks it into streaks.
-5. **Light** – the sun is upper left, so faces that rise to the right are lit and faces that fall away are in shadow. Rock gets tilted strata bands; snow and glaciers follow the fall line.
+4. **Two colours** – one paper colour and one ink. Tone comes from which characters are used and how densely; distance from how faint they are.
 
 Characters are stamped from a pre-rendered glyph atlas (one column per glyph, one row per ink colour) at any opacity, so one cell can stack a solid block and a stroke. Ridgelines pick characters by slope and sub-row position (`_ - ' / \`) so they read as smooth lines instead of staircases.
 
@@ -86,7 +85,7 @@ AsciiBG.scenes.myscene = {
 };
 ```
 
-See `src/scenes/rockies.js` for everything else (band layers, merged canvases, reflections, free-moving birds via `custom`) and the header of `src/engine.js` for the full layer reference.
+See `src/scenes/bc.js` for everything else (band layers, merged canvases, reflections, free-moving birds via `custom`) and the header of `src/engine.js` for the full layer reference.
 
 ## Files
 
@@ -96,6 +95,6 @@ example.html        used as a page background
 styles.css          panel styles
 src/noise.js        seeded hash / value noise / fbm / ridged noise
 src/engine.js       renderer: layers, parallax, occlusion, depth of field
-src/scenes/rockies.js  the Rockies scene
+src/scenes/bc.js    the BC scene
 src/ui.js           control panel
 ```

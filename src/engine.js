@@ -57,7 +57,7 @@
   const PAR_Y = 10;
 
   const DEFAULTS = {
-    scene: 'rockies',
+    scene: 'bc',
     focus: null,            // null = the scene's own focus depth
     blur: 1,                // depth-of-field strength, 0 = everything sharp
     speed: 1,
@@ -66,9 +66,10 @@
     autoRack: false,        // slowly sweep focus near <-> far
     fontSize: null,         // null = 12px desktop, 10px small screens
     lineHeight: 1.08,
+    fontWeight: 500,        // a little heavier reads better as ink on paper
     font: '"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-    bg: '#121211',          // off-black
-    ink: '#ece7dc',         // warm off-white
+    bg: '#ecebe7',          // paper
+    ink: '#1c1b19',         // ink
     fps: 60,
     maxDpr: 2,
     reducedMotion: true,    // respect prefers-reduced-motion
@@ -81,6 +82,12 @@
     '·': (c, x, y, w, h) => dot(c, x, y, w, h, 0.2),
     '•': (c, x, y, w, h) => dot(c, x, y, w, h, 0.36),
     '■': (c, x, y, w, h) => dot(c, x, y, w, h, 0.62),
+    '□': (c, x, y, w, h) => {
+      const s = Math.max(3, Math.round(w * 0.62)), lw = Math.max(1, Math.round(w * 0.12));
+      const x0 = Math.round(x + (w - s) / 2), y0 = Math.round(y + (h - s) / 2);
+      c.fillRect(x0, y0, s, lw); c.fillRect(x0, y0 + s - lw, s, lw);
+      c.fillRect(x0, y0, lw, s); c.fillRect(x0 + s - lw, y0, lw, s);
+    },
     '█': (c, x, y, w, h) => c.fillRect(x, y, w, h),
     '▆': (c, x, y, w, h) => { const g = Math.max(1, Math.round(h * 0.12)); c.fillRect(x, y + g, w, h - g); },
     '─': (c, x, y, w, h) => { const t = Math.max(1, Math.round(h * 0.08)); c.fillRect(x, Math.round(y + h / 2 - t / 2), w, t); },
@@ -164,7 +171,7 @@
 
     // ---- depth of field ----------------------------------------------------
     function blurFor(z) {
-      return o.blur * MAX_BLUR * (fontSize / 12) * smoothstep(0.02, 0.5, Math.abs(z - focus));
+      return o.blur * MAX_BLUR * (fontSize / 12) * smoothstep(0.03, 0.6, Math.abs(z - focus));
     }
     function dimFor(z) {
       return 1 - Math.min(1, o.blur) * 0.4 * smoothstep(0.03, 0.6, Math.abs(z - focus));
@@ -246,7 +253,7 @@
       const names = Object.keys(inks);
       atlas.width = CW * glyphs.length; atlas.height = CH * names.length;
       const c = atlas.getContext('2d');
-      c.font = fontSize * dpr + 'px ' + o.font;
+      c.font = o.fontWeight + ' ' + fontSize * dpr + 'px ' + o.font;
       c.textAlign = 'center'; c.textBaseline = 'middle';
       gIdx = Object.create(null);
       glyphs.forEach((gl, i) => { gIdx[gl] = i; });
@@ -490,7 +497,7 @@
     raf = requestAnimationFrame(frame);
     // Rebuild the atlas once the web font has arrived.
     if (document.fonts && document.fonts.load) {
-      document.fonts.load(fontSize + 'px ' + o.font).then(() => resize()).catch(() => {});
+      document.fonts.load(o.fontWeight + ' ' + fontSize + 'px ' + o.font).then(() => resize()).catch(() => {});
     }
     return api;
   }

@@ -1,10 +1,13 @@
 :root {
-  --bg: #f2ece1;
-  --panel: rgba(17, 17, 17, 0.88);
-  --line: rgba(255, 255, 255, 0.07);
-  --text: #d9d4ca;
-  --muted: #7d7d7d;
-  --accent: #d97757;
+  /* two colours, same as the scene: paper and ink */
+  --paper: #ecebe7;
+  --ink: #1c1b19;
+  --bg: var(--paper);
+  --panel: rgba(236, 235, 231, 0.92);
+  --line: rgba(28, 27, 25, 0.16);
+  --text: var(--ink);
+  --muted: rgba(28, 27, 25, 0.55);
+  --accent: var(--ink);
   --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
@@ -63,7 +66,7 @@ html, body {
 }
 .ab-seg button { padding: 3px 9px; }
 .ab-seg button + button { border-left: 1px solid var(--line); }
-.ab-seg button[aria-pressed="true"] { color: var(--text); background: rgba(255, 255, 255, 0.07); }
+.ab-seg button[aria-pressed="true"] { color: var(--text); background: var(--line); }
 .ab-icon { width: 22px; height: 22px; border-radius: 4px; font-size: 14px; line-height: 1; }
 .ab-pill { padding: 7px 11px; }
 .ab-seg button:hover, .ab-icon:hover, .ab-pill:hover { color: var(--text); }
