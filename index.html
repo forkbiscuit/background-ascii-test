@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#121211">
+  <title>ASCII Depth</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main id="stage"></main>
+
+  <!-- Plain scripts (no modules) so this also works opened straight from disk. -->
+  <script src="src/noise.js"></script>
+  <script src="src/engine.js"></script>
+  <script src="src/scenes/pnw.js"></script>
+  <script src="src/ui.js"></script>
+  <script>
+    // Everything is tweakable from the URL, e.g. ?focus=0.9&blur=1.5&speed=0.5&ui=0
+    const q = new URLSearchParams(location.search);
+    const num = (k) => (q.has(k) ? +q.get(k) : undefined);
+    const flag = (k) => (q.has(k) ? q.get(k) !== '0' : undefined);
+
+    const bg = AsciiBG.create(document.getElementById('stage'), {
+      scene: AsciiBG.scenes[q.get('scene')] ? q.get('scene') : 'pnw',
+      focus: num('focus'),
+      blur: num('blur'),
+      speed: num('speed'),
+      snap: flag('snap'),
+      pointer: flag('pointer'),
+      autoRack: flag('rack'),
+      start: num('start'),
+      debug: flag('debug'),
+    });
+
+    if (q.get('ui') !== '0') AsciiBG.ui(bg);
+  </script>
+</body>
+</html>
