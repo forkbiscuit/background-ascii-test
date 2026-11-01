@@ -62,7 +62,7 @@
     blur: 1,                // depth-of-field strength, 0 = everything sharp
     speed: 1,
     snap: false,            // lock every layer to one shared character grid
-    pointer: true,          // pointer parallax
+    pointer: false,         // pointer parallax (off by default)
     autoRack: false,        // slowly sweep focus near <-> far
     fontSize: null,         // null = 12px desktop, 10px small screens
     lineHeight: 1.08,
@@ -73,7 +73,7 @@
     fps: 60,
     maxDpr: 2,
     reducedMotion: true,    // respect prefers-reduced-motion
-    start: 0,               // seconds of travel to skip ahead on load
+    start: null,            // seconds of travel to skip ahead on load (null = the scene's own)
     debug: false,
   };
 
@@ -217,10 +217,15 @@
       root.style.background = def.background || o.bg;
       stats.canvases = groups.length;
       focus = firstScene && o.focus != null ? o.focus : def.focus;
+      // where to start: seconds of travel, or the scene's start(S) giving a scroll position
+      const start = firstScene && o.start != null ? o.start : def.start || 0;
       firstScene = false;
-      scroll = 0;
-      if (o.start) { t = o.start; scroll = o.start * BASE_SPEED * (o.fontSize || 12) / 12; }
+      t = 0; scroll = 0;
       resize();
+      if (typeof start === 'function') scroll = start(S);
+      else scroll = start * BASE_SPEED * (fontSize / 12);
+      t = scroll / (BASE_SPEED * (fontSize / 12));
+      lastSig = ''; render();
       emit('scene', { name, title: def.title });
       emit('focus', focus);
     }

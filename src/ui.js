@@ -95,7 +95,6 @@
     }
     const rack = toggle('auto rack', o.autoRack, (v) => bg.setAutoRack(v));
     const snap = toggle('grid lock', o.snap, (v) => bg.setSnap(v));
-    const ptr = toggle('pointer', o.pointer, (v) => bg.setPointer(v));
 
     // --- scene switcher -------------------------------------------------------
     const seg = el('div', { class: 'ab-seg', role: 'group', 'aria-label': 'Scene' });
@@ -116,7 +115,7 @@
       ]),
       blur.row,
       speed.row,
-      el('div', { class: 'ab-checks' }, [rack.node, snap.node, ptr.node]),
+      el('div', { class: 'ab-checks' }, [rack.node, snap.node]),
       el('p', { class: 'ab-keys', text: '[ ] focus · click a tick to rack · space pause · h hide' }),
     ]);
     const pill = el('button', { class: 'ab-pill', type: 'button', text: '◐ controls', 'aria-label': 'Show controls', onclick: () => setHidden(false) });

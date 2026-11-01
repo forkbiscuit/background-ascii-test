@@ -118,6 +118,7 @@
   NS.scenes.bc = {
     title: 'BC',
     focus: 0.34,                                            // the firs and cabins
+    start: 215,                                             // open with a cabin in view
     glyphs: "─-·•=□■.,:'^_|/\\v0123456789",
 
     setup() {

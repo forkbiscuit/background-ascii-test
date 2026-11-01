@@ -5,6 +5,8 @@ An ASCII landscape background for mrrobertstuart.com, in two colours: paper and 
 Two scenes:
 
 - **Vista** (default): a giant knitted sun with hatched rays, a jagged Coast Mountains range with snow left as bare paper, valley haze, a pointed fir treeline and a dense forest of strokes that slides faster the closer it is. The left of the sky is kept clear for the header.
+
+  The walk follows a looping route: fir forest → a clearing with a cabin and chimney smoke → forest → a lake with someone fishing off a dock → forest → a winding river with someone floating down it on an inner tube. Lakes and rivers sit on the ground plane, so they widen toward you in perspective as they pass. It opens on the lake.
 - **BC**: a side-scroller in "ruled" ASCII (horizontal rules broken into runs and sprinkled with `─ • = □ ■ 0–9`): mountains, foothills, stands of Douglas firs and log cabins with chimney smoke passing by over a ruled ground strip.
 
 `index.html` shows the header (name, title, View work) over the scene.
@@ -25,13 +27,12 @@ Open `index.html` in a browser. It works straight from disk (plain scripts, no m
 | **speed** | travel speed. |
 | **auto rack** | slowly sweeps focus near ↔ far. |
 | **grid lock** | snaps every layer to one shared character grid, so motion steps column by column like a real terminal. |
-| **pointer** | layers shift with the mouse for a little extra parallax. |
 
 Keys: `[` `]` move focus · `space` pause · `h` hide the panel.
 
 ### URL parameters
 
-`?focus=0.6&blur=1.5&speed=0.5&snap=1&pointer=0&rack=1&start=40&ui=0`
+`?focus=0.6&blur=1.5&speed=0.5&snap=1&rack=1&start=40&ui=0`
 
 `start` skips ahead that many seconds of travel; `ui=0` hides the panel; `debug=1` exposes per-layer render timings on `bg.stats`.
 
@@ -49,7 +50,7 @@ Keys: `[` `]` move focus · `space` pause · `h` hide the panel.
 </script>
 ```
 
-Options: `scene`, `focus`, `blur`, `speed`, `snap`, `pointer`, `autoRack`, `start`, `fontSize`, `fontWeight`, `bg`, `ink`, `fps`, `maxDpr`. The two colours are `bg` (paper, `#ecebe7`) and `ink` (`#1c1b19`); pass your own pair to recolour the whole scene.
+Options: `scene`, `focus`, `blur`, `speed`, `snap`, `pointer` (mouse parallax, off by default), `autoRack`, `start`, `fontSize`, `fontWeight`, `bg`, `ink`, `fps`, `maxDpr`. The two colours are `bg` (paper, `#ecebe7`) and `ink` (`#1c1b19`); pass your own pair to recolour the whole scene.
 
 It respects `prefers-reduced-motion` (slows right down), skips frames when nothing has changed, only redraws a layer once it has moved by a whole pixel, and drops to 1× resolution on devices that can't hold ~40 fps.
 
