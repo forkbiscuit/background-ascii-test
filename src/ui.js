@@ -139,9 +139,13 @@
       segBtns.forEach(([n, b]) => b.setAttribute('aria-pressed', String(n === name)));
       buildTicks();
       showFocus(bg.focus);
-      const p = new URLSearchParams(location.search);
-      p.set('scene', name);
-      history.replaceState(null, '', '?' + p.toString());
+      if (scenes.length > 1) {
+        try {
+          const p = new URLSearchParams(location.search);
+          p.set('scene', name);
+          history.replaceState(null, '', '?' + p.toString());
+        } catch (e) { /* sandboxed frames */ }
+      }
     });
     segBtns.forEach(([n, b]) => b.setAttribute('aria-pressed', String(n === bg.scene)));
     buildTicks();
