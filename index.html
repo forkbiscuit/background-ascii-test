@@ -16,7 +16,7 @@
   <!-- Plain scripts (no modules) so this also works opened straight from disk. -->
   <script src="src/noise.js"></script>
   <script src="src/engine.js"></script>
-  <script src="src/scenes/pnw.js"></script>
+  <script src="src/scenes/rockies.js"></script>
   <script src="src/ui.js"></script>
   <script>
     // Everything is tweakable from the URL, e.g. ?focus=0.9&blur=1.5&speed=0.5&ui=0
@@ -25,7 +25,7 @@
     const flag = (k) => (q.has(k) ? q.get(k) !== '0' : undefined);
 
     const bg = AsciiBG.create(document.getElementById('stage'), {
-      scene: AsciiBG.scenes[q.get('scene')] ? q.get('scene') : 'pnw',
+      scene: AsciiBG.scenes[q.get('scene')] ? q.get('scene') : 'rockies',
       focus: num('focus'),
       blur: num('blur'),
       speed: num('speed'),

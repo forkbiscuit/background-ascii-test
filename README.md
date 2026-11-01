@@ -1,6 +1,6 @@
 # background-ascii-test
 
-A Pacific Northwest scene drawn entirely in ASCII: a snow-capped volcano, layered forested ridges, valley mist, fir-lined shores, a lake that mirrors it all, and a canoe with a lantern. Every layer moves at its own speed and has its own focus blur, so the flat text reads with real depth.
+Daytime in the Canadian Rockies, drawn entirely in ASCII: jagged peaks with glaciers and tilted rock strata, sun and drifting cumulus, foothills, spruce forest, a glacial lake that mirrors the peaks, a few birds, and a rock pile right in front of the lens. Every layer moves at its own speed and has its own focus blur, so the flat text reads with real depth.
 
 Off-black background, warm off-white type, no dependencies, no build step.
 
@@ -52,10 +52,11 @@ It respects `prefers-reduced-motion` (slows right down), skips frames when nothi
 
 Each layer is drawn onto its own stacked `<canvas>`:
 
-1. **Parallax** – a layer at depth `z` scrolls at `z × speed`. The volcano and sky are fixed; the lake is split into bands where every row has its own depth, so the water slides like a floor.
-2. **Occlusion** – each layer paints a silhouette in the background colour under its characters, so nearer things hide farther things. Farther ridges get a slightly lighter fill (atmospheric perspective).
+1. **Parallax** – a layer at depth `z` scrolls at `z × speed`. The sky and sun are fixed; the range barely moves; the lake is split into bands where every row has its own depth, so the water slides like a floor.
+2. **Occlusion** – each layer paints a silhouette in the background colour under its characters, so nearer things hide farther things. Farther layers get a slightly lighter fill (atmospheric perspective).
 3. **Depth of field** – each canvas gets a CSS `blur()` and its characters dim based on the distance between its `z` and the focus depth.
-4. **Reflections** – each lake cell looks up what sits above the waterline at its mirrored position (stretched 1.6× so the snowcap lands in the water), then ripple noise breaks it into streaks.
+4. **Reflections** – each lake cell looks up what sits above the waterline at its mirrored position (stretched 1.6× so the peaks land in the water), then ripple noise breaks it into streaks.
+5. **Light** – the sun is upper left, so faces that rise to the right are lit and faces that fall away are in shadow. Rock gets tilted strata bands; snow and glaciers follow the fall line.
 
 Characters are stamped from a pre-rendered glyph atlas (one column per glyph, one row per brightness level). Ridgelines pick characters by slope and sub-row position (`_ - ' / \`) so they read as smooth lines instead of staircases.
 
@@ -85,7 +86,7 @@ AsciiBG.scenes.myscene = {
 };
 ```
 
-See `src/scenes/pnw.js` for everything else (band layers, sprites, merged canvases, reflections) and the header of `src/engine.js` for the full layer reference.
+See `src/scenes/rockies.js` for everything else (band layers, merged canvases, reflections, free-moving birds via `custom`) and the header of `src/engine.js` for the full layer reference.
 
 ## Files
 
@@ -95,6 +96,6 @@ example.html        used as a page background
 styles.css          panel styles
 src/noise.js        seeded hash / value noise / fbm / ridged noise
 src/engine.js       renderer: layers, parallax, occlusion, depth of field
-src/scenes/pnw.js   the Cascades scene
+src/scenes/rockies.js  the Rockies scene
 src/ui.js           control panel
 ```

@@ -55,7 +55,7 @@
   const PAR_Y = 10;
 
   const DEFAULTS = {
-    scene: 'pnw',
+    scene: 'rockies',
     focus: null,            // null = the scene's own focus depth
     blur: 1,                // depth-of-field strength, 0 = everything sharp
     speed: 1,
@@ -79,6 +79,7 @@
     '·': (c, x, y, w, h) => dot(c, x, y, w, h, 0.2),
     '•': (c, x, y, w, h) => dot(c, x, y, w, h, 0.36),
     '■': (c, x, y, w, h) => dot(c, x, y, w, h, 0.62),
+    '█': (c, x, y, w, h) => { const g = Math.max(1, Math.round(h * 0.12)); c.fillRect(x, y + g, w, h - g); },
     '─': (c, x, y, w, h) => { const t = Math.max(1, Math.round(h * 0.08)); c.fillRect(x, Math.round(y + h / 2 - t / 2), w, t); },
     '━': (c, x, y, w, h) => { const t = Math.max(2, Math.round(h * 0.16)); c.fillRect(x, Math.round(y + h / 2 - t / 2), w, t); },
     '▲': (c, x, y, w, h) => {
@@ -297,8 +298,23 @@
       L.nextKey = key;
     }
 
+    // putAt(x css px, row, char, brightness) - for free-moving things (birds)
+    let curDy = 0;
+    function putAt(x, row, chr, b) {
+      curX = Math.round(x * dpr - CW / 2);
+      curY = Math.round(row) * CH + curDy;
+      return put(chr, b);
+    }
+
     function drawSpan(L, ctx) {
       const d = L.def, offDev = L.offDev, dyDev = L.dyDev;
+      if (d.custom) {
+        curCtx = ctx; curDim = L.dim; curCell = d.occlude === 'cell'; curDy = dyDev;
+        ctx.fillStyle = d.fill || o.bg;
+        d.custom(S, t, putAt);
+        L.key = L.nextKey; L.lastT = t;
+        return;
+      }
       const k0 = Math.floor(offDev / CW), kN = k0 + cols + 1;
       const occ = d.occlude === true;
       curCtx = ctx; curDim = L.dim; curCell = d.occlude === 'cell';
