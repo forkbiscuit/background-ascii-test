@@ -27,7 +27,9 @@
  *     fill: '#8a9bb0',         // silhouette colour, or fill(col, S) for a colour
  *                              // per column (band layers: fill(rowFraction, S))
  *     ink: 'snow',             // default ink for put() (a key of scene.inks)
- *     static: true,            // glyph() doesn't depend on time -> cache it
+ *     static: true,            // glyph() doesn't depend on time: the layer is drawn
+ *                              // once into an off-screen strip and slid into place
+ *     screenSpace: true,       // glyph() depends on screen x: redraw instead of sliding
  *     fps: 12,                 // ...or redraw at most this often
  *     merge: true,             // share the previous layer's canvas (and blur)
  *     stop: false,             // hide from the focus ticks in the UI
@@ -42,7 +44,15 @@
  *
  *   A "band" layer replaces span() with band: [topFraction, bottomFraction]
  *   and zAt(rowFraction), giving every row its own depth (ground planes,
- *   water). glyph() then receives the row fraction as `d`.
+ *   water). glyph() then receives the row fraction as `d`. Each row is cached
+ *   as a strip and redrawn only when it has moved a whole column or its
+ *   animation ticks (animFps, default 12), so glyph() sees a stepped `t`.
+ *
+ * A scene can set fontSize / fontSizeSmall (px) for its type size on large /
+ * small (< 640px) screens; smaller type means more detail. Small type also
+ * wants: fontWeight, inkGamma (< 1 darkens faint strokes) and blurScale.
+ * A layer with cssDim: true is dimmed with CSS opacity instead of being
+ * redrawn when focus moves (only for layers that don't need to hide others).
  */
 (function (g) {
   'use strict';
@@ -152,8 +162,9 @@
     let curCtx = null, curX = 0, curY = 0, curDim = 1, curCell = false, curInk = 0;
     const warned = {};
     function put(chr, b, ink) {
-      const v = b * curDim;
+      let v = b * curDim;
       if (v <= 0.02) return false;
+      if (gammaLUT) v = gammaLUT[(v > 1 ? 1 : v) * 255 | 0];
       const gi = gIdx[chr];
       const row = ink === undefined ? curInk : inkIdx[ink];
       if (gi === undefined || row === undefined) {
@@ -167,19 +178,26 @@
       return true;
     }
 
+    const weight = () => (scene && scene.fontWeight) || o.fontWeight;
+    let gammaLUT = null;                     // opacity curve for the scene's inkGamma
+
     function emit(type, detail) { (listeners[type] || []).forEach((fn) => fn(detail)); }
 
     // ---- depth of field ----------------------------------------------------
     function blurFor(z) {
-      return o.blur * MAX_BLUR * (fontSize / 12) * smoothstep(0.03, 0.6, Math.abs(z - focus));
+      return o.blur * MAX_BLUR * ((scene && scene.blurScale) || 1) * Math.sqrt(fontSize / 12) * smoothstep(0.03, 0.6, Math.abs(z - focus));
     }
     function dimFor(z) {
-      return 1 - Math.min(1, o.blur) * 0.3 * smoothstep(0.03, 0.6, Math.abs(z - focus));
+      return Math.round((1 - Math.min(1, o.blur) * 0.3 * smoothstep(0.03, 0.6, Math.abs(z - focus))) * 20) / 20;
     }
     function setFilter(G) {
       const b = blurFor(G.z);
       const f = b > 0.15 ? 'blur(' + b.toFixed(1) + 'px)' : 'none';
       if (f !== G.filter) { G.canvas.style.filter = f; G.filter = f; }
+      if (G.cssDim) {
+        const op = String(dimFor(G.z));
+        if (op !== G.opacity) { G.canvas.style.opacity = op; G.opacity = op; }
+      }
     }
     const zOf = (L) => (L.def.band ? L.zMean : L.def.z);
 
@@ -200,7 +218,7 @@
       layers = def.layers.map((ld) => {
         const L = { def: ld, off: 0, offDev: 0, dyDev: 0, dim: 1, key: '', lastT: -1, rowOff: null };
         if (ld.band) L.zMean = (ld.zAt(ld.band[0]) + ld.zAt(ld.band[1])) / 2;
-        if (!ld.merge || !groups.length) groups.push(makeGroup(zOf(L)));
+        if (!ld.merge || !groups.length) { groups.push(makeGroup(zOf(L))); groups[groups.length - 1].cssDim = !!ld.cssDim; }
         L.group = groups[groups.length - 1];
         L.group.layers.push(L);
         S.layers[ld.name] = L;
@@ -223,8 +241,8 @@
       t = 0; scroll = 0;
       resize();
       if (typeof start === 'function') scroll = start(S);
-      else scroll = start * BASE_SPEED * (fontSize / 12);
-      t = scroll / (BASE_SPEED * (fontSize / 12));
+      else scroll = start * BASE_SPEED;
+      t = scroll / BASE_SPEED;
       lastSig = ''; render();
       emit('scene', { name, title: def.title });
       emit('focus', focus);
@@ -234,9 +252,10 @@
       const r = root.getBoundingClientRect();
       W = Math.max(1, r.width); H = Math.max(1, r.height);
       dpr = Math.min(dprCap, g.devicePixelRatio || 1);
-      fontSize = o.fontSize || (W < 640 ? 10 : 12);
+      const small = W < 640;
+      fontSize = o.fontSize || (small ? (scene && scene.fontSizeSmall) || 10 : (scene && scene.fontSize) || 12);
       const m = document.createElement('canvas').getContext('2d');
-      m.font = fontSize * dpr + 'px ' + o.font;
+      m.font = weight() + ' ' + fontSize * dpr + 'px ' + o.font;
       CW = Math.max(2, Math.round(m.measureText('M').width));
       CH = Math.max(3, Math.round(fontSize * dpr * o.lineHeight));
       cw = CW / dpr; ch = CH / dpr;
@@ -252,13 +271,15 @@
     }
 
     function buildAtlas() {
+      const gm = scene && scene.inkGamma;
+      gammaLUT = gm && gm !== 1 ? Float32Array.from({ length: 256 }, (_, i) => Math.pow(i / 255, gm)) : null;
       const glyphs = Array.from(new Set(Array.from(' ' + (scene ? scene.glyphs : ''))));
       atlas = document.createElement('canvas');
       const inks = Object.assign({ ink: o.ink }, scene ? scene.inks : null);
       const names = Object.keys(inks);
       atlas.width = CW * glyphs.length; atlas.height = CH * names.length;
       const c = atlas.getContext('2d');
-      c.font = o.fontWeight + ' ' + fontSize * dpr + 'px ' + o.font;
+      c.font = weight() + ' ' + fontSize * dpr + 'px ' + o.font;
       c.textAlign = 'center'; c.textBaseline = 'middle';
       gIdx = Object.create(null);
       glyphs.forEach((gl, i) => { gIdx[gl] = i; });
@@ -305,7 +326,7 @@
       L.off = (d.fixed ? 0 : scroll * z) + pointer.x * PAR_X * Math.max(z, 0.02);
       L.offDev = o.snap ? Math.round(L.off / cw) * CW : Math.round(L.off * dpr);
       L.dyDev = Math.round(-pointer.y * PAR_Y * z * dpr);
-      L.dim = dimFor(z);
+      L.dim = L.group.cssDim ? 1 : dimFor(z);
       const key = L.offDev + ':' + L.dyDev + ':' + Math.round(L.dim * 100) + ':' + epoch;
       const timed = d.fps ? t - L.lastT >= 1 / d.fps : false;
       L.dirty = !(d.static || d.fps) || key !== L.key || timed;
@@ -320,8 +341,63 @@
       return put(chr, b, ink);
     }
 
+    // A static, moving layer is drawn once into an off-screen strip a screen and
+    // a half wide (only as tall as it needs), then slid into place each frame.
+    function drawSpanCached(L, ctx) {
+      const d = L.def, offDev = L.offDev;
+      const k0 = Math.floor(offDev / CW), kN = k0 + cols + 1;
+      const key = Math.round(L.dim * 100) + ':' + epoch;
+      let C = L.cache;
+      if (!C) { const c = document.createElement('canvas'); C = L.cache = { canvas: c, ctx: c.getContext('2d'), key: '', kA: 1, kB: 0, w: 0, h: 0, rMin: 0 }; }
+      if (C.key !== key || k0 < C.kA || kN > C.kB) {
+        const kA = k0 - 2, kB = kN + Math.ceil(cols * 0.5) + 2, n = kB - kA + 1;
+        if (!L.spanBuf || L.spanBuf.length < n * 2) L.spanBuf = new Float64Array(n * 2);
+        const sb = L.spanBuf;
+        let rMin = Infinity, rMax = -Infinity;
+        for (let i = 0; i < n; i++) {
+          sb[i * 2] = NaN;
+          if (!d.span(kA + i, S, t, SPAN)) continue;
+          const r0 = Math.max(-2, Math.round(SPAN[0])), r1 = Math.min(rows + 2, Math.round(SPAN[1]));
+          if (r1 <= r0) continue;
+          sb[i * 2] = SPAN[0]; sb[i * 2 + 1] = SPAN[1];
+          if (r0 < rMin) rMin = r0;
+          if (r1 > rMax) rMax = r1;
+        }
+        C.kA = kA; C.kB = kB; C.key = key; C.w = 0;
+        if (rMin !== Infinity) {
+          const w = n * CW, h = (rMax - rMin) * CH, cv = C.canvas;
+          if (cv.width < w || cv.height < h) { cv.width = Math.max(w, cv.width); cv.height = Math.max(h, cv.height); }
+          else { C.ctx.globalAlpha = 1; C.ctx.clearRect(0, 0, cv.width, cv.height); }
+          C.w = w; C.h = h; C.rMin = rMin;
+          const cc = C.ctx, occ = d.occlude === true, fillFn = typeof d.fill === 'function' ? d.fill : null;
+          curCtx = cc; curDim = L.dim; curCell = d.occlude === 'cell';
+          curInk = inkIdx[d.ink || 'ink'] || 0;
+          cc.fillStyle = fillFn ? o.bg : d.fill || o.bg;
+          for (let i = 0; i < n; i++) {
+            const s0 = sb[i * 2];
+            if (s0 !== s0) continue;
+            const k = kA + i;
+            const r0 = Math.max(-2, Math.round(s0)), r1 = Math.min(rows + 2, Math.round(sb[i * 2 + 1]));
+            const xDev = i * CW;
+            if (fillFn) cc.fillStyle = fillFn(k, S);
+            cc.globalAlpha = 1;
+            if (occ) cc.fillRect(xDev, (r0 - rMin) * CH, CW, (r1 - r0) * CH);
+            curX = xDev;
+            const x = (k * CW - offDev) / dpr;
+            for (let r = r0; r < r1; r++) {
+              curY = (r - rMin) * CH;
+              d.glyph(k, r, r - s0, t, put, S, x);
+            }
+          }
+        }
+      }
+      if (C.w) { ctx.globalAlpha = 1; ctx.drawImage(C.canvas, 0, 0, C.w, C.h, C.kA * CW - offDev, C.rMin * CH + L.dyDev, C.w, C.h); }
+      L.key = L.nextKey; L.lastT = t;
+    }
+
     function drawSpan(L, ctx) {
       const d = L.def, offDev = L.offDev, dyDev = L.dyDev;
+      if (d.static && !d.fixed && !d.screenSpace && d.cache !== false && !d.custom) return drawSpanCached(L, ctx);
       if (d.custom) {
         curCtx = ctx; curDim = L.dim; curCell = d.occlude === 'cell'; curDy = dyDev;
         curInk = inkIdx[d.ink || 'ink'] || 0;
@@ -360,6 +436,7 @@
       const r1 = d.band[1] >= 1 ? rows + 2 : Math.round(d.band[1] * rows);
       const dyDev = Math.round(-pointer.y * PAR_Y * L.zMean * dpr);
       if (!L.rowOff || L.rowOff.length < rows + 3) L.rowOff = new Float32Array(rows + 3);
+      if (!L.strips) L.strips = [];
       const fillFn = typeof d.fill === 'function' ? d.fill : null;
       curCtx = ctx; curCell = d.occlude === 'cell';
       curInk = inkIdx[d.ink || 'ink'] || 0;
@@ -379,13 +456,30 @@
         const off = scroll * z + pointer.x * PAR_X * z;
         L.rowOff[Math.max(0, r)] = off;
         const offDev = o.snap ? Math.round(off / cw) * CW : Math.round(off * dpr);
-        const k0 = Math.floor(offDev / CW), kN = k0 + cols + 1;
-        curDim = dimFor(z);
-        curY = r * CH + dyDev;
-        for (let k = k0; k <= kN; k++) {
-          curX = k * CW - offDev;
-          d.glyph(k, r, rf, t, put, S, curX / dpr);
+        const k0 = Math.floor(offDev / CW);
+        const dim = dimFor(z);
+        // each row is a cached strip: redrawn when it moves a whole column or its
+        // animation ticks (staggered across rows so the work is spread out)
+        const fps = d.animFps || 12, phase = (r * 0.618034) % 1;
+        const tick = Math.floor(t * fps + phase);
+        const key = k0 + ':' + tick + ':' + dim + ':' + epoch;
+        let st = L.strips[r];
+        if (!st) { const c = document.createElement('canvas'); st = L.strips[r] = { canvas: c, ctx: c.getContext('2d'), key: '' }; }
+        if (st.key !== key) {
+          const w = (cols + 2) * CW, sc = st.ctx;
+          if (st.canvas.width !== w || st.canvas.height !== CH) { st.canvas.width = w; st.canvas.height = CH; }
+          else { sc.globalAlpha = 1; sc.clearRect(0, 0, w, CH); }
+          sc.fillStyle = (fillFn ? fillFn(rf, S) : d.fill) || o.bg;
+          curCtx = sc; curDim = dim; curY = 0;
+          const tq = (tick - phase) / fps;
+          for (let k = k0, kN = k0 + cols + 1; k <= kN; k++) {
+            curX = (k - k0) * CW;
+            d.glyph(k, r, rf, tq, put, S, (k * CW - offDev) / dpr);
+          }
+          st.key = key;
         }
+        ctx.globalAlpha = 1;
+        ctx.drawImage(st.canvas, k0 * CW - offDev, r * CH + dyDev);
       }
     }
 
@@ -437,7 +531,7 @@
         slow = elapsed > 0.025 && elapsed < 0.2 ? slow + 1 : Math.max(0, slow - 2);
         if (slow > 80) { dprCap = 1; slow = 0; resize(); }
       }
-      if (!paused) { t += dt; scroll += dt * BASE_SPEED * o.speed * (fontSize / 12); }
+      if (!paused) { t += dt; scroll += dt * BASE_SPEED * o.speed; }
       if (o.autoRack) {
         rackT += dt;
         const zs = layers.map(zOf);
@@ -502,7 +596,7 @@
     raf = requestAnimationFrame(frame);
     // Rebuild the atlas once the web font has arrived.
     if (document.fonts && document.fonts.load) {
-      document.fonts.load(o.fontWeight + ' ' + fontSize + 'px ' + o.font).then(() => resize()).catch(() => {});
+      document.fonts.load(weight() + ' ' + fontSize + 'px ' + o.font).then(() => resize()).catch(() => {});
     }
     return api;
   }

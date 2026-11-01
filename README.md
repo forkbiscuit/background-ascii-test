@@ -6,7 +6,9 @@ Two scenes:
 
 - **Vista** (default): a giant knitted sun with hatched rays, a jagged Coast Mountains range with snow left as bare paper, valley haze, a pointed fir treeline and a dense forest of strokes that slides faster the closer it is. The left of the sky is kept clear for the header.
 
-  The walk follows a looping route: fir forest → a clearing with a cabin and chimney smoke → forest → a lake with someone fishing off a dock → forest → a winding river with someone floating down it on an inner tube. Lakes and rivers sit on the ground plane, so they widen toward you in perspective as they pass. It opens on the lake.
+  The walk follows a looping route: fir forest → a clearing with a log cabin (notched corners, paned windows, chimney smoke, woodpile) → forest → a lake that mirrors the treeline and mountains, with someone fishing off a dock → forest → a winding river with someone floating down it on an inner tube. Lakes and rivers sit on the ground plane, so they widen toward you in perspective as they pass. It opens on the lake.
+
+  Vista uses small 8px type (7px on phones) for detail; shapes are designed at 12px and scaled, so they keep their size while getting more characters.
 - **BC**: a side-scroller in "ruled" ASCII (horizontal rules broken into runs and sprinkled with `─ • = □ ■ 0–9`): mountains, foothills, stands of Douglas firs and log cabins with chimney smoke passing by over a ruled ground strip.
 
 `index.html` shows the header (name, title, View work) over the scene.
@@ -52,7 +54,7 @@ Keys: `[` `]` move focus · `space` pause · `h` hide the panel.
 
 Options: `scene`, `focus`, `blur`, `speed`, `snap`, `pointer` (mouse parallax, off by default), `autoRack`, `start`, `fontSize`, `fontWeight`, `bg`, `ink`, `fps`, `maxDpr`. The two colours are `bg` (paper, `#ecebe7`) and `ink` (`#1c1b19`); pass your own pair to recolour the whole scene.
 
-It respects `prefers-reduced-motion` (slows right down), skips frames when nothing has changed, only redraws a layer once it has moved by a whole pixel, and drops to 1× resolution on devices that can't hold ~40 fps.
+It respects `prefers-reduced-motion` (slows right down) and skips frames when nothing has changed. Layers that don't animate are drawn once into an off-screen strip and slid into place; ground rows are cached as strips and only redrawn when they move a whole column or their animation ticks (12 fps). It drops to 1× resolution on devices that can't hold ~40 fps.
 
 ## How it works
 
